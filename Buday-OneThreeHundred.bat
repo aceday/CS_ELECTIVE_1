@@ -10,17 +10,21 @@ REM START PROGRAM
 
 set /p number=Enter a number: 
 
-REM Theres 4 conditions
-if %number% geq 1 if %number% leq 100 (
-    echo The number is in the range 1-100
-) else if %number% geq 101 if %number% leq 200 (
-    echo The number is in the range 101-200
-) else if %number% geq 201 if %number% leq 300 (
-    echo The number is in the range 201-300
-) else (
-    echo The number is outside the range 1-300
-)
+:scale_num
+  REM Theres 4 conditions
+  if %number% geq 1 if %number% leq 100 (
+      echo The number is in the range 1-100
+  ) else if %number% geq 101 if %number% leq 200 (
+      echo The number is in the range 101-200
+  ) else if %number% geq 201 if %number% leq 300 (
+      echo The number is in the range 201-300
+  ) else (
+      echo The number is outside the range 1-300
+  )
+  goto end
+goto scale_num
 
+:end
 pause
 
 REM END PROGRAM
