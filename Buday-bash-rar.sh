@@ -229,7 +229,7 @@ while [ $screen -gt 0 ]; do
                 # EXECUTE THE RAR COMMAND
                 eval $rar_cmd "${queue_files[@]}"
 
-                pause_nul
+                # pause_nul             # Debugging purposes
                 screen=1
             elif [ $object_name = 'B' ]; then
                 screen=1
@@ -239,25 +239,92 @@ while [ $screen -gt 0 ]; do
                 pause_nul
             fi
             ;;
-        2)
-            logo
-            read -p "Enter rar archive path: " rar_name
-            if [ -e "$rar_name" ]; then
-                screen=2
-                while [ $screen -gt 1 ]; do
-                    logo
-                    echo "Queue Files/Folders"
-                done
-                read -p "Enter the name of the file to extract: " file_name
-                rar x $rar_name $file_name
-            else
-                echo ""
-                echo "$rar_name not exists!"
+                2)
+            screen=2
+            while [ $screen -gt 1 ]; do
+                logo
+                echo "Ex.: /home/user/Downloads/myRAR.rar"
+                read -p "Enter existing rar archive path: " rar_name
+        
+                # Check if the RAR Archive already exists
+                if [ -e "$rar_name" ]; then
+                    screen=1
+                else
+                    echo ""
+                    echo "$rar_name does not exist!"
+                    pause_nul
+                fi
+            done
+        
+            # List all files/folders in the archive
+            read -p "Do you want to list all files in the archive? (Y/n): " rar_list_files
+            if [ "$rar_list_files" = 'Y' ] || [ "$rar_list_files" = 'y' ]; then
+                eval "rar l $rar_name | sed '1,6d'"
                 pause_nul
             fi
-            # read -p "Enter the name of the RAR Archive: " rar_name
-            # read -p "Enter the name of the file to extract: " file_name
-            # rar x $rar_name $file_name
+        
+            screen=2
+            rar_cmd_list="rar l $rar_name | sed '1,6d'"
+            rar_extract_path=""
+
+            while [ $screen -gt 1 ]; do
+                logo
+                echo "Archive Name/Path: $rar_name/$rar_in_path"
+                # List all files in the archive and remove the first 6 lines
+                eval $rar_cmd_list
+
+                echo ""
+                echo "[B] Back | [P] Password | [CP] Change Path"
+                echo "[E] Extract"
+                read -p "Enter files/folders inside of archive: " rar_extract_path
+        
+                case $rar_extract_path in
+                    'E')
+                        echo "Ex.: /home/user/new_folder"
+                        read -p "Enter destination path: " rar_extract_path
+
+                        # Check if the path exists then make folder
+                        if [ ! -d "$rar_extract_path" ]; then
+                            mkdir -p "$rar_extract_path"
+                        fi
+
+                        # Check if the password is empty
+                        if [ -z "$rar_passwd" ]; then
+                            rar_cmd="rar x $rar_name $rar_extract_path"
+                        else
+                            rar_cmd="rar x -p$rar_passwd $rar_name $rar_extract_path"
+                        fi
+                        screen=1
+                        ;;
+                    'CP')
+                        echo ""
+                        echo "Ex.: ./folder1   --- Access the folder"
+                        echo "Ex.: .           --- Go to parent directory"
+                        read -p "Enter the new path: " rar_in_path
+                        if [ -d "$rar_in_path" ]; then
+                            rar_cmd_list="rar l $rar_name $rar_in_path | sed '1,6d'"
+                        else
+                            echo ""
+                            echo "Invalid path!"
+                            pause_nul
+                        fi
+                        ;;
+                    'B')
+                        screen=1
+                        ;;
+                    'P')
+                        echo ""
+                        echo "Purpose: To extract the RAR Archive with password"
+                        read -p "Enter the password: " rar_passwd
+                        rar_cmd="rar x -p$rar_passwd $rar_name $rar_extract_path"
+                        eval $rar_cmd
+                        ;;
+                    *)
+                        rar_cmd="rar x $rar_name $rar_extract_path"
+                        eval $rar_cmd
+                        ;;
+                esac
+            done
             pause
             ;;
         3)
