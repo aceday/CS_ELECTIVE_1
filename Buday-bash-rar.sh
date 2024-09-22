@@ -22,6 +22,7 @@ logo() {
     ██████  ███████ ██████  █████ ███████    ██    ██    ██ ██   ██ ██ ██    ██ 
     ██   ██ ██   ██ ██   ██            ██    ██    ██    ██ ██   ██ ██ ██    ██ 
     ██   ██ ██   ██ ██   ██       ███████    ██     ██████  ██████  ██  ██████                                                                          
+    By Buday <@aceday>
     \e[0m"
 }
 
@@ -40,12 +41,14 @@ screen=1                # Screen number
 queue_files=()          # Queue files in array type
 queue_files_text=""     # Queue files in text file type
 rar_passwd=""           # Rar initial password
-rar_compress="-m3"         # Rar initial compress
-
-
+rar_compress="-m3"      # Rar initial compress
+rar_cmd=""              # Rar default command
+rar_recovery=""         # Rar recovery record
+rar_solid=""            # Rar solid archive
+rar_split=""            # Rar split archive
 # START PROGRAM
 
-# Enters in while loop to recall the $screen variable to display the menu
+# Enters in while loop to recall the '$screen' variable to display the menu
 while [ $screen -gt 0 ]; do
     logo
     echo "SELECTIONS"
@@ -62,8 +65,28 @@ while [ $screen -gt 0 ]; do
     case $main_choice in
 
         1)
+            screen=2
+            while [ $screen -gt 1 ]; do
             logo
             read -p "Name of new RAR Arcive: " rar_name
+
+            # Check if the RAR Archive already exists
+            if [ -e "$rar_name" ]; then
+                echo ""
+                echo "$rar_name already exists!"
+                pause_nul
+            # Check if the RAR Archive name is empty
+            elif [ -z "$rar_name" ]; then
+                echo ""
+                echo "Invalid RAR Archive name!"
+                pause_nul
+            # After doesnt meet 2 condition then else GO
+            else
+                rar_cmd="rar a $rar_name "       # Overwrite the default command
+                screen=1
+            fi
+
+            done
 
             screen=2
 
@@ -75,10 +98,59 @@ while [ $screen -gt 0 ]; do
                     echo "[$i] ${queue_files[$i]}"
                 done
                 echo ""
+                echo "M: $rar_compress | P: $rar_passwd | R: $rar_recovery | SO: $rar_solid | SI: $rar_split"
                 echo "[D] Done | [S#] Remove from queue | [B] Back"
                 echo "[M] Compression Level | [P] Password | [C] Clear Queue"
+                echo "[R] Recovery Record | [SO] Solid Archive | [SI] Split Archive"
                 read -p "Input filename or directory to append: " object_name
                 case $object_name in
+                    'SI')
+                        read -p "Enter the size of the split archive (e.g. 10M): " rar_split
+
+                        # Check if the split archive size is valid using regular expression
+                        if [[ $rar_split =~ ^[0-9]+[KMG]$ ]]; then
+                            # Example: 10M -> -v10M
+                            # Example: 15G -> -v15G
+                            rar_split="-v$rar_split"
+                        else
+                            echo ""
+                            echo "Invalid split archive size!"
+                            pause_nul
+                        fi
+                        rar_cmd+="-v$rar_split "
+                        ;;
+                    'SO')
+                        read -p "Solid Archive (Y/N): " rar_solid
+
+                        # Check if the user input is 'Y' or 'N'
+
+                        # If the user input is 'Y' or 'y' then set the solid archive to '-s'
+                        if [ $rar_solid = 'Y' ] || [ $rar_solid = 'y' ]; then
+                            rar_solid="-s"
+
+                        # If the user input is 'N' or 'n' then set the solid archive to ''
+                        elif [ $rar_solid = 'N' ] || [ $rar_solid = 'n' ]; then
+                            rar_solid=""
+                        else
+                            echo ""
+                            echo "Invalid solid archive!"
+                            pause_nul
+
+                        fi
+                        rar_solid="-s"
+                        ;;
+                    'R')
+                        read -p "Enter recovery record percentage (0-10): " rar_recovery
+                        if [ $rar_recovery -ge 0 ] && [ $rar_recovery -le 10 ]; then
+                            rar_recovery="-rr$rar_recovery%"
+                        elif [ $rar_recovery -eq 0 ]; then
+                            rar_recovery=""
+                        else
+                            echo ""
+                            echo "Invalid recovery record percentage!"
+                            pause_nul
+                        fi
+                        ;;
                     'M')
                         read -p "Enter compression level (0-5): " rar_compress
                         if [ $rar_compress -ge 0 ] && [ $rar_compress -le 5 ]; then
@@ -118,10 +190,45 @@ while [ $screen -gt 0 ]; do
                         ;;
                 esac
             done
+
             # Create the RAR Archive
-            # And this part condition 
+
+
+            # If the queue is not empty and the object name says 'D' then create the RAR Archive
             if [ $object_name = 'D' ] && [ ${#queue_files[@]} -gt 0 ]; then
-                rar a "$rar_name" "${queue_files[@]}"
+
+                # Configuration to make rar archive
+
+                # Password
+                if [ ! -z "$rar_passwd" ]; then
+                    rar_cmd+="-p$rar_passwd "
+                    # rar a "$rar_name" $rar_compress "${queue_files[@]}"
+                fi
+                
+                # Compression level
+                rar_cmd+="$rar_compress "       # Append the compression level
+
+                # Recovery Record
+                # If not empty then append the recovery record
+                if [ ! -z "$rar_recovery" ]; then
+                    rar_cmd+="$rar_recovery "
+                fi
+
+                # Solid Archive
+                # If not empty then append the solid archive
+                if [ ! -z "$rar_solid" ]; then
+                    rar_cmd+="$rar_solid "
+                fi
+                
+                # Split Archive
+                # If not empty then append the split archive
+                if [ ! -z "$rar_split" ]; then
+                    rar_cmd+="$rar_split "
+                fi
+
+                # EXECUTE THE RAR COMMAND
+                eval $rar_cmd "${queue_files[@]}"
+
                 pause_nul
                 screen=1
             elif [ $object_name = 'B' ]; then
